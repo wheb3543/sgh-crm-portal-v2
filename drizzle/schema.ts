@@ -1,17 +1,10 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
  */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -25,4 +18,80 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+/**
+ * Campaigns table - stores marketing campaign information
+ */
+export const campaigns = mysqlTable("campaigns", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  description: text("description"),
+  startDate: timestamp("startDate"),
+  endDate: timestamp("endDate"),
+  isActive: boolean("isActive").default(true).notNull(),
+  metaPixelId: varchar("metaPixelId", { length: 100 }),
+  metaAccessToken: text("metaAccessToken"),
+  whatsappEnabled: boolean("whatsappEnabled").default(false).notNull(),
+  whatsappWelcomeMessage: text("whatsappWelcomeMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Campaign = typeof campaigns.$inferSelect;
+export type InsertCampaign = typeof campaigns.$inferInsert;
+
+/**
+ * Leads table - stores customer registration data
+ */
+export const leads = mysqlTable("leads", {
+  id: int("id").autoincrement().primaryKey(),
+  campaignId: int("campaignId").notNull(),
+  fullName: varchar("fullName", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  status: mysqlEnum("status", ["new", "contacted", "booked", "not_interested", "no_answer"]).default("new").notNull(),
+  source: varchar("source", { length: 100 }),
+  utmSource: varchar("utmSource", { length: 100 }),
+  utmMedium: varchar("utmMedium", { length: 100 }),
+  utmCampaign: varchar("utmCampaign", { length: 100 }),
+  utmContent: varchar("utmContent", { length: 100 }),
+  notes: text("notes"),
+  emailSent: boolean("emailSent").default(false).notNull(),
+  whatsappSent: boolean("whatsappSent").default(false).notNull(),
+  bookingConfirmationSent: boolean("bookingConfirmationSent").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Lead = typeof leads.$inferSelect;
+export type InsertLead = typeof leads.$inferInsert;
+
+/**
+ * Lead status history - tracks all status changes
+ */
+export const leadStatusHistory = mysqlTable("leadStatusHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  leadId: int("leadId").notNull(),
+  userId: int("userId"),
+  oldStatus: varchar("oldStatus", { length: 50 }),
+  newStatus: varchar("newStatus", { length: 50 }).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type LeadStatusHistory = typeof leadStatusHistory.$inferSelect;
+export type InsertLeadStatusHistory = typeof leadStatusHistory.$inferInsert;
+
+/**
+ * Settings table - stores system configuration
+ */
+export const settings = mysqlTable("settings", {
+  id: int("id").autoincrement().primaryKey(),
+  key: varchar("key", { length: 100 }).notNull().unique(),
+  value: text("value"),
+  description: text("description"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Setting = typeof settings.$inferSelect;
+export type InsertSetting = typeof settings.$inferInsert;

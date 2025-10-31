@@ -1,0 +1,100 @@
+/**
+ * WhatsApp API integration
+ * Sends WhatsApp messages to customers
+ */
+
+interface WhatsAppMessage {
+  to: string;
+  message: string;
+}
+
+/**
+ * Send WhatsApp message
+ * In production, integrate with WhatsApp Business API or third-party service
+ */
+export async function sendWhatsAppMessage(params: WhatsAppMessage): Promise<boolean> {
+  try {
+    // TODO: Integrate with actual WhatsApp API service
+    // Options: WhatsApp Business API, Twilio, MessageBird, etc.
+    console.log('[WhatsApp] Would send message:', {
+      to: params.to,
+      message: params.message.substring(0, 100),
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('[WhatsApp] Failed to send message:', error);
+    return false;
+  }
+}
+
+/**
+ * Send welcome message to new lead
+ */
+export async function sendWelcomeMessage(lead: {
+  phone: string;
+  fullName: string;
+  campaignName: string;
+  welcomeMessage?: string;
+}): Promise<boolean> {
+  const defaultMessage = `مرحباً ${lead.fullName}،
+
+شكراً لتسجيلك في ${lead.campaignName} بالمستشفى السعودي الألماني - صنعاء.
+
+سنتواصل معك قريباً لتحديد موعدك وتقديم الخدمة المطلوبة.
+
+للاستفسارات العاجلة، يمكنك التواصل معنا على الرقم المجاني: 8000018
+
+نرعاكم كأهالينا 💚`;
+
+  const message = lead.welcomeMessage || defaultMessage;
+  
+  return sendWhatsAppMessage({
+    to: lead.phone,
+    message,
+  });
+}
+
+/**
+ * Send booking confirmation message
+ */
+export async function sendBookingConfirmation(lead: {
+  phone: string;
+  fullName: string;
+  appointmentDate?: string;
+  appointmentTime?: string;
+}): Promise<boolean> {
+  const message = `عزيزي/عزيزتي ${lead.fullName}،
+
+تم تأكيد حجزك بنجاح! ✅
+
+${lead.appointmentDate && lead.appointmentTime ? `
+📅 التاريخ: ${lead.appointmentDate}
+🕐 الوقت: ${lead.appointmentTime}
+` : ''}
+
+📍 الموقع: المستشفى السعودي الألماني - صنعاء
+شارع الستين الشمالي (بين جولة عمران وجولة الجمنة)
+
+يرجى الحضور قبل الموعد بـ 15 دقيقة.
+
+للاستفسارات: 8000018
+
+نرعاكم كأهالينا 💚
+المستشفى السعودي الألماني`;
+
+  return sendWhatsAppMessage({
+    to: lead.phone,
+    message,
+  });
+}
+
+/**
+ * Send custom message
+ */
+export async function sendCustomMessage(phone: string, message: string): Promise<boolean> {
+  return sendWhatsAppMessage({
+    to: phone,
+    message,
+  });
+}
