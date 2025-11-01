@@ -28,14 +28,21 @@ export function registerOAuthRoutes(app: Express) {
         return;
       }
 
-      await db.upsertUser({
-        openId: userInfo.openId,
-        name: userInfo.name || null,
-        email: userInfo.email ?? null,
-        loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
-        lastSignedIn: new Date(),
-      });
+      // Check if user email is in allowed list
+      const userEmail = userInfo.email;
+      if (!userEmail) {
+        res.redirect(302, "/unauthorized?reason=no_email");
+        return;
+      }
 
+      const isAllowed = await db.isUserAllowed(userEmail);
+      if (!isAllowed) {
+        console.log(`[OAuth] Unauthorized access attempt by ${userEmail}`);
+        res.redirect(302, "/unauthorized?reason=not_allowed");
+        return;
+      }
+
+      // User is allowed, proceed with login
       const sessionToken = await sdk.createSessionToken(userInfo.openId, {
         name: userInfo.name || "",
         expiresInMs: ONE_YEAR_MS,
@@ -43,6 +50,18 @@ export function registerOAuthRoutes(app: Express) {
 
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+
+      // Update last signed in
+      const user = await db.getUserByEmail(userEmail);
+      if (user && user.id) {
+        // Update last signed in time via SQL
+        const { eq } = await import('drizzle-orm');
+        const { users } = await import('../../drizzle/schema');
+        const dbConn = await db.getDb();
+        if (dbConn) {
+          await dbConn.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, user.id));
+        }
+      }
 
       res.redirect(302, "/admin");
     } catch (error) {
