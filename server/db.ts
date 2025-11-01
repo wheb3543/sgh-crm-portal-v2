@@ -19,17 +19,48 @@ export async function getDb() {
 
 // User management for OAuth
 export async function upsertUser(user: any): Promise<void> {
-  // This function is kept for OAuth compatibility but won't be used
-  console.log('[Database] upsertUser called (OAuth compatibility)');
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot upsert user: database not available");
+    return;
+  }
+
+  if (!user.openId) {
+    console.warn("[Database] Cannot upsert user: openId is required");
+    return;
+  }
+
+  try {
+    // Check if user exists
+    const existing = await getUserByOpenId(user.openId);
+    
+    if (existing) {
+      // Update existing user
+      await db.update(users)
+        .set({
+          name: user.name ?? existing.name,
+          email: user.email ?? existing.email,
+          loginMethod: user.loginMethod ?? existing.loginMethod,
+          lastSignedIn: user.lastSignedIn ?? new Date(),
+        })
+        .where(eq(users.openId, user.openId));
+      console.log('[Database] User updated:', user.email);
+    } else {
+      // User doesn't exist - this shouldn't happen in our flow
+      // because users must be approved first
+      console.warn('[Database] User not found, cannot create via upsertUser:', user.email);
+    }
+  } catch (error) {
+    console.error("[Database] Failed to upsert user:", error);
+    throw error;
+  }
 }
 
 export async function getUserByOpenId(openId: string) {
-  // This function is kept for OAuth compatibility
   const db = await getDb();
   if (!db) return undefined;
   
-  // Check if user is in allowed list
-  const result = await db.select().from(users).where(eq(users.email, openId)).limit(1);
+  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 

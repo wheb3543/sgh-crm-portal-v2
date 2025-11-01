@@ -99,3 +99,9 @@
 - [x] حفظ openId عند إنشاء طلب التصريح
 - [x] تحديث approveAccessRequest لاستخدام openId
 - [x] إضافة openId و loginMethod إلى جدول users
+
+
+## إصلاح مشكلة إعادة التوجيه بعد تسجيل الدخول
+- [x] إصلاح getUserByOpenId للبحث في openId
+- [x] تحديث upsertUser لتحديث بيانات المستخدم
+- [x] إضافة المستخدمين المطلوبين
