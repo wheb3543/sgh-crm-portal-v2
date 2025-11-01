@@ -1,6 +1,6 @@
 import { eq, desc, and, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, campaigns, leads, leadStatusHistory, settings, InsertCampaign, InsertLead, InsertLeadStatusHistory, InsertSetting } from "../drizzle/schema";
+import { InsertUser, users, campaigns, leads, leadStatusHistory, settings, doctors, appointments, InsertCampaign, InsertLead, InsertLeadStatusHistory, InsertSetting, InsertAppointment } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -233,4 +233,61 @@ export async function getCampaignStats(campaignId: number) {
   }).from(leads).where(eq(leads.campaignId, campaignId));
   
   return result[0];
+}
+
+// Doctors queries
+export async function getAllDoctors() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(doctors).where(eq(doctors.available, "yes"));
+  return result;
+}
+
+export async function getDoctorById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(doctors).where(eq(doctors.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+// Appointments queries
+export async function createAppointment(appointment: InsertAppointment) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot create appointment: database not available");
+    return null;
+  }
+
+  try {
+    await db.insert(appointments).values(appointment);
+    return { success: true };
+  } catch (error) {
+    console.error("[Database] Failed to create appointment:", error);
+    throw error;
+  }
+}
+
+export async function getAllAppointments() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(appointments);
+  return result;
+}
+
+export async function updateAppointmentStatus(id: number, status: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update appointment: database not available");
+    return;
+  }
+
+  try {
+    await db.update(appointments).set({ status: status as any }).where(eq(appointments.id, id));
+  } catch (error) {
+    console.error("[Database] Failed to update appointment:", error);
+    throw error;
+  }
 }

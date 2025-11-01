@@ -19,9 +19,15 @@ import {
   getCampaignStats,
   searchLeads,
   getLeadsByCampaign,
+  getAllDoctors,
+  getDoctorById,
+  createAppointment,
+  getAllAppointments,
+  updateAppointmentStatus,
 } from "./db";
 import { notifyOwner } from "./_core/notification";
-import { sendNewLeadNotification } from "./email";
+import { sendNewLeadNotification, sendNewAppointmentEmail } from "./email";
+import { trackLead, trackCompleteRegistration } from "./facebookConversion";
 import { sendWelcomeMessage, sendBookingConfirmation, sendCustomMessage } from "./whatsapp";
 
 export const appRouter = router({
@@ -74,10 +80,21 @@ export const appRouter = router({
           bookingConfirmationSent: false,
         });
 
+         // Track Facebook Conversion API - Lead
+        await trackLead({
+          email: input.email,
+          phone: input.phone,
+          firstName: input.fullName.split(' ')[0],
+          contentName: campaign.name,
+        });
+
         // Send notification to owner
         await notifyOwner({
           title: "تسجيل جديد في المخيم الطبي الخيري",
-          content: `تم تسجيل عميل جديد:\nالاسم: ${input.fullName}\nالهاتف: ${input.phone}\nالبريد: ${input.email || "غير متوفر"}`,
+          content: `تم تسجيل عميل جديد:
+الاسم: ${input.fullName}
+الهاتف: ${input.phone}
+البريد: ${input.email || "غير متوفر"}`,
         });
 
         // Send email notification
@@ -100,6 +117,14 @@ export const appRouter = router({
             welcomeMessage: campaign.whatsappWelcomeMessage || undefined,
           });
         }
+
+        // Track Facebook Conversion API - CompleteRegistration
+        await trackCompleteRegistration({
+          email: input.email,
+          phone: input.phone,
+          firstName: input.fullName.split(' ')[0],
+          contentName: campaign.name,
+        });
 
         return { success: true };
       }),
@@ -261,6 +286,105 @@ export const appRouter = router({
       .input(z.object({ campaignId: z.number() }))
       .query(async ({ input }) => {
         return getCampaignStats(input.campaignId);
+      }),
+  }),
+
+  // Doctors router
+  doctors: router({
+    list: publicProcedure.query(async () => {
+      return getAllDoctors();
+    }),
+
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return getDoctorById(input.id);
+      }),
+  }),
+
+  // Appointments router
+  appointments: router({
+    submit: publicProcedure
+      .input(z.object({
+        fullName: z.string(),
+        phone: z.string(),
+        email: z.string().optional(),
+        doctorId: z.number(),
+        preferredDate: z.string().optional(),
+        preferredTime: z.string().optional(),
+        notes: z.string().optional(),
+        campaignSlug: z.string(),
+        utmSource: z.string().optional(),
+        utmMedium: z.string().optional(),
+        utmCampaign: z.string().optional(),
+        utmContent: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        // Get campaign by slug
+        const campaign = await getCampaignBySlug(input.campaignSlug);
+        if (!campaign) {
+          throw new Error("Campaign not found");
+        }
+
+        // Create appointment
+        const appointment = await createAppointment({
+          campaignId: campaign.id,
+          doctorId: input.doctorId,
+          fullName: input.fullName,
+          phone: input.phone,
+          email: input.email,
+          preferredDate: input.preferredDate,
+          preferredTime: input.preferredTime,
+          notes: input.notes,
+          status: "pending",
+          utmSource: input.utmSource,
+          utmMedium: input.utmMedium,
+          utmCampaign: input.utmCampaign,
+          utmContent: input.utmContent,
+        });
+
+        // Send email notification
+        const doctor = await getDoctorById(input.doctorId);
+        await sendNewAppointmentEmail({
+          appointment: {
+            ...input,
+            doctorName: doctor?.name || "غير محدد",
+            doctorSpecialty: doctor?.specialty || "",
+          },
+          campaign: campaign.name,
+        });
+
+        // Send WhatsApp message if enabled
+        if (campaign.whatsappEnabled && campaign.whatsappWelcomeMessage) {
+          await sendWelcomeMessage({
+            phone: input.phone,
+            fullName: input.fullName,
+            campaignName: campaign.name,
+            welcomeMessage: campaign.whatsappWelcomeMessage,
+          });
+        }
+
+        // Notify owner
+        await notifyOwner({
+          title: "حجز موعد جديد",
+          content: `تم حجز موعد جديد من ${input.fullName} مع ${doctor?.name || "غير محدد"}`,
+        });
+
+        return appointment;
+      }),
+
+    list: protectedProcedure.query(async () => {
+      return getAllAppointments();
+    }),
+
+    updateStatus: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        status: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        await updateAppointmentStatus(input.id, input.status);
+        return { success: true };
       }),
   }),
 });

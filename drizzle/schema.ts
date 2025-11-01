@@ -95,3 +95,45 @@ export const settings = mysqlTable("settings", {
 
 export type Setting = typeof settings.$inferSelect;
 export type InsertSetting = typeof settings.$inferInsert;
+
+/**
+ * Doctors table - stores information about hospital doctors
+ */
+export const doctors = mysqlTable("doctors", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  specialty: varchar("specialty", { length: 255 }).notNull(),
+  image: varchar("image", { length: 500 }),
+  bio: text("bio"),
+  available: mysqlEnum("available", ["yes", "no"]).default("yes").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Doctor = typeof doctors.$inferSelect;
+export type InsertDoctor = typeof doctors.$inferInsert;
+
+/**
+ * Appointments table - stores appointment bookings
+ */
+export const appointments = mysqlTable("appointments", {
+  id: int("id").autoincrement().primaryKey(),
+  campaignId: int("campaignId").notNull(),
+  doctorId: int("doctorId").notNull(),
+  fullName: varchar("fullName", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  preferredDate: varchar("preferredDate", { length: 50 }),
+  preferredTime: varchar("preferredTime", { length: 50 }),
+  notes: text("notes"),
+  status: mysqlEnum("status", ["pending", "confirmed", "cancelled", "completed"]).default("pending").notNull(),
+  utmSource: varchar("utmSource", { length: 100 }),
+  utmMedium: varchar("utmMedium", { length: 100 }),
+  utmCampaign: varchar("utmCampaign", { length: 100 }),
+  utmContent: varchar("utmContent", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Appointment = typeof appointments.$inferSelect;
+export type InsertAppointment = typeof appointments.$inferInsert;

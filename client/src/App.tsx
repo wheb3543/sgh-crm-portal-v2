@@ -8,12 +8,14 @@ import Home from "./pages/Home";
 import CampaignLanding from "./pages/CampaignLanding";
 import ThankYou from "./pages/ThankYou";
 import AdminDashboard from "./pages/AdminDashboard";
+import DoctorAppointments from "./pages/DoctorAppointments";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={CampaignLanding} />
+      <Route path={"/doctors"} component={DoctorAppointments} />
       <Route path={"/thank-you"} component={ThankYou} />
       <Route path={"/admin"} component={AdminDashboard} />
       <Route path={"/404"} component={NotFound} />
