@@ -38,7 +38,16 @@ export function registerOAuthRoutes(app: Express) {
       const isAllowed = await db.isUserAllowed(userEmail);
       if (!isAllowed) {
         console.log(`[OAuth] Unauthorized access attempt by ${userEmail}`);
-        res.redirect(302, "/unauthorized?reason=not_allowed");
+        
+        // Create access request automatically
+        await db.createAccessRequest({
+          name: userInfo.name || 'مستخدم جديد',
+          email: userEmail,
+          phone: null,
+          reason: 'طلب تلقائي عند محاولة تسجيل الدخول',
+        });
+        
+        res.redirect(302, "/access-request?email=" + encodeURIComponent(userEmail));
         return;
       }
 

@@ -138,3 +138,19 @@ export const appointments = mysqlTable("appointments", {
 
 export type Appointment = typeof appointments.$inferSelect;
 export type InsertAppointment = typeof appointments.$inferInsert;
+
+// Access requests table for new user authorization
+export const accessRequests = mysqlTable("accessRequests", {
+  id: int("id").autoincrement().primaryKey(),
+  name: text("name").notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  phone: varchar("phone", { length: 20 }),
+  reason: text("reason"),
+  status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
+  requestedAt: timestamp("requestedAt").defaultNow().notNull(),
+  reviewedAt: timestamp("reviewedAt"),
+  reviewedBy: int("reviewedBy"),
+});
+
+export type AccessRequest = typeof accessRequests.$inferSelect;
+export type InsertAccessRequest = typeof accessRequests.$inferInsert;

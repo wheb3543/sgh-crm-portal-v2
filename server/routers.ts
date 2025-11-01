@@ -24,6 +24,10 @@ import {
   createAppointment,
   getAllAppointments,
   updateAppointmentStatus,
+  getAllAccessRequests,
+  getPendingAccessRequests,
+  approveAccessRequest,
+  rejectAccessRequest,
 } from "./db";
 import { notifyOwner } from "./_core/notification";
 import { sendNewLeadNotification, sendNewAppointmentEmail } from "./email";
@@ -384,6 +388,37 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         await updateAppointmentStatus(input.id, input.status);
+        return { success: true };
+      }),
+  }),
+
+  accessRequests: router({
+    list: protectedProcedure.query(async () => {
+      return getAllAccessRequests();
+    }),
+
+    pending: protectedProcedure.query(async () => {
+      return getPendingAccessRequests();
+    }),
+
+    approve: protectedProcedure
+      .input(z.object({ requestId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await approveAccessRequest(input.requestId, ctx.user.id);
+        
+        // Notify owner
+        await notifyOwner({
+          title: "تم الموافقة على طلب تصريح",
+          content: `تمت الموافقة على طلب التصريح رقم ${input.requestId}`,
+        });
+        
+        return { success: true };
+      }),
+
+    reject: protectedProcedure
+      .input(z.object({ requestId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await rejectAccessRequest(input.requestId, ctx.user.id);
         return { success: true };
       }),
   }),

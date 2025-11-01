@@ -1,6 +1,6 @@
 import { eq, desc, and, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, campaigns, leads, leadStatusHistory, settings, doctors, appointments, InsertCampaign, InsertLead, InsertLeadStatusHistory, InsertSetting, InsertAppointment } from "../drizzle/schema";
+import { InsertUser, users, campaigns, leads, leadStatusHistory, settings, doctors, appointments, accessRequests, InsertCampaign, InsertLead, InsertLeadStatusHistory, InsertSetting, InsertAppointment, InsertAccessRequest } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -68,6 +68,84 @@ export async function getUserByEmail(email: string) {
 export async function isUserAllowed(email: string): Promise<boolean> {
   const user = await getUserByEmail(email);
   return user !== undefined && user.isActive === 'yes';
+}
+
+// Access request queries
+export async function createAccessRequest(request: InsertAccessRequest) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Check if request already exists
+  const existing = await db.select().from(accessRequests)
+    .where(eq(accessRequests.email, request.email!))
+    .limit(1);
+  
+  if (existing.length > 0) {
+    return existing[0];
+  }
+  
+  const result = await db.insert(accessRequests).values(request);
+  return { id: Number(result[0].insertId), ...request };
+}
+
+export async function getAllAccessRequests() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(accessRequests).orderBy(desc(accessRequests.requestedAt));
+}
+
+export async function getPendingAccessRequests() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(accessRequests)
+    .where(eq(accessRequests.status, 'pending'))
+    .orderBy(desc(accessRequests.requestedAt));
+}
+
+export async function approveAccessRequest(requestId: number, reviewerId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Get request details
+  const request = await db.select().from(accessRequests)
+    .where(eq(accessRequests.id, requestId))
+    .limit(1);
+  
+  if (request.length === 0) {
+    throw new Error("Request not found");
+  }
+  
+  // Create user account
+  await db.insert(users).values({
+    username: request[0].email.split('@')[0],
+    password: 'temp_password',
+    name: request[0].name,
+    email: request[0].email,
+    role: 'user',
+    isActive: 'yes',
+  });
+  
+  // Update request status
+  await db.update(accessRequests)
+    .set({ 
+      status: 'approved', 
+      reviewedAt: new Date(),
+      reviewedBy: reviewerId 
+    })
+    .where(eq(accessRequests.id, requestId));
+}
+
+export async function rejectAccessRequest(requestId: number, reviewerId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(accessRequests)
+    .set({ 
+      status: 'rejected', 
+      reviewedAt: new Date(),
+      reviewedBy: reviewerId 
+    })
+    .where(eq(accessRequests.id, requestId));
 }
 
 // Campaign queries

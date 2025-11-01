@@ -10,6 +10,7 @@ import ThankYou from "./pages/ThankYou";
 import AdminDashboard from "./pages/AdminDashboard";
 import DoctorAppointments from "./pages/DoctorAppointments";
 import Unauthorized from "./pages/Unauthorized";
+import AccessRequest from "./pages/AccessRequest";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -19,6 +20,7 @@ function Router() {
       <Route path={"/doctors"} component={DoctorAppointments} />
       <Route path={"/thank-you"} component={ThankYou} />
       <Route path={"/unauthorized"} component={Unauthorized} />
+      <Route path={"/access-request"} component={AccessRequest} />
       <Route path={"/admin"} component={AdminDashboard} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
