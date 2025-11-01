@@ -63,7 +63,7 @@ export default function CampaignLanding() {
 
   return (
     <>
-      <MetaPixel pixelId="YOUR_META_PIXEL_ID" />
+      <MetaPixel pixelId="2008380493273171" />
       <div className="min-h-screen bg-gradient-to-b from-white to-blue-50" dir="rtl">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -145,7 +145,7 @@ export default function CampaignLanding() {
                 </div>
                 <div className="mt-4 pt-4 border-t border-white/20">
                   <div className="flex items-center justify-between">
-                    <span className="text-lg">القلب المفتوح</span>
+                    <span className="text-lg" style={{height: '36px'}}>القلب المفتوح</span>
                     <span className="text-3xl font-bold">1,100,000 ريال</span>
                   </div>
                   <p className="text-sm opacity-90 mt-2">فحوصات بخصم 50%</p>
