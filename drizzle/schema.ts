@@ -5,10 +5,12 @@ import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean } from "d
  */
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
+  openId: varchar("openId", { length: 64 }),
   username: varchar("username", { length: 50 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
+  loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   isActive: mysqlEnum("isActive", ["yes", "no"]).default("yes").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -142,6 +144,7 @@ export type InsertAppointment = typeof appointments.$inferInsert;
 // Access requests table for new user authorization
 export const accessRequests = mysqlTable("accessRequests", {
   id: int("id").autoincrement().primaryKey(),
+  openId: varchar("openId", { length: 64 }),
   name: text("name").notNull(),
   email: varchar("email", { length: 320 }).notNull(),
   phone: varchar("phone", { length: 20 }),

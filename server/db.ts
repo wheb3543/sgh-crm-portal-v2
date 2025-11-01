@@ -115,8 +115,13 @@ export async function approveAccessRequest(requestId: number, reviewerId: number
     throw new Error("Request not found");
   }
   
-  // Create user account
+  if (!request[0].openId) {
+    throw new Error("Request missing openId");
+  }
+  
+  // Create user account with openId from OAuth
   await db.insert(users).values({
+    openId: request[0].openId,
     username: request[0].email.split('@')[0],
     password: 'temp_password',
     name: request[0].name,

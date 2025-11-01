@@ -39,8 +39,9 @@ export function registerOAuthRoutes(app: Express) {
       if (!isAllowed) {
         console.log(`[OAuth] Unauthorized access attempt by ${userEmail}`);
         
-        // Create access request automatically
+        // Create access request automatically with openId
         await db.createAccessRequest({
+          openId: userInfo.openId,
           name: userInfo.name || 'مستخدم جديد',
           email: userEmail,
           phone: null,
