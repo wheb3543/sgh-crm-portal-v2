@@ -71,7 +71,7 @@ export default function AdminDashboard() {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState("");
   const [statusNotes, setStatusNotes] = useState("");
-  const [activeTab, setActiveTab] = useState<"leads" | "requests">("leads");
+  const [activeTab, setActiveTab] = useState<"leads" | "requests" | "appointments">("leads");
 
   const { data: accessRequests, refetch: refetchRequests } = trpc.accessRequests.pending.useQuery();
   
@@ -97,6 +97,13 @@ export default function AdminDashboard() {
 
   const { data: leads, isLoading: leadsLoading, refetch: refetchLeads } = trpc.leads.list.useQuery();
   const { data: stats } = trpc.leads.stats.useQuery();
+  const { data: appointments, isLoading: appointmentsLoading, refetch: refetchAppointments } = trpc.appointments.list.useQuery();
+  
+  const [appointmentSearchTerm, setAppointmentSearchTerm] = useState("");
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [appointmentStatusDialogOpen, setAppointmentStatusDialogOpen] = useState(false);
+  const [newAppointmentStatus, setNewAppointmentStatus] = useState("");
+  const [appointmentStatusNotes, setAppointmentStatusNotes] = useState("");
 
   const updateStatusMutation = trpc.leads.updateStatus.useMutation({
     onSuccess: () => {
@@ -106,6 +113,20 @@ export default function AdminDashboard() {
       setSelectedLead(null);
       setNewStatus("");
       setStatusNotes("");
+    },
+    onError: () => {
+      toast.error("حدث خطأ أثناء تحديث الحالة");
+    },
+  });
+
+  const updateAppointmentStatusMutation = trpc.appointments.updateStatus.useMutation({
+    onSuccess: () => {
+      toast.success("تم تحديث حالة الموعد بنجاح");
+      refetchAppointments();
+      setAppointmentStatusDialogOpen(false);
+      setSelectedAppointment(null);
+      setNewAppointmentStatus("");
+      setAppointmentStatusNotes("");
     },
     onError: () => {
       toast.error("حدث خطأ أثناء تحديث الحالة");
@@ -125,6 +146,29 @@ export default function AdminDashboard() {
     );
   }, [leads, searchTerm]);
 
+  const filteredAppointments = useMemo(() => {
+    if (!appointments) return [];
+    if (!appointmentSearchTerm) return appointments;
+    
+    const term = appointmentSearchTerm.toLowerCase();
+    return appointments.filter(
+      (apt) =>
+        apt.fullName.toLowerCase().includes(term) ||
+        apt.phone.includes(term) ||
+        (apt.email && apt.email.toLowerCase().includes(term))
+    );
+  }, [appointments, appointmentSearchTerm]);
+
+  const appointmentStats = useMemo(() => {
+    if (!appointments) return { total: 0, pending: 0, confirmed: 0, cancelled: 0 };
+    return {
+      total: appointments.length,
+      pending: appointments.filter(a => a.status === 'pending').length,
+      confirmed: appointments.filter(a => a.status === 'confirmed').length,
+      cancelled: appointments.filter(a => a.status === 'cancelled').length,
+    };
+  }, [appointments]);
+
   const handleStatusUpdate = () => {
     if (!selectedLead || !newStatus) return;
     
@@ -132,6 +176,15 @@ export default function AdminDashboard() {
       id: selectedLead.id,
       status: newStatus as any,
       notes: statusNotes || undefined,
+    });
+  };
+
+  const handleAppointmentStatusUpdate = () => {
+    if (!selectedAppointment || !newAppointmentStatus) return;
+    
+    updateAppointmentStatusMutation.mutate({
+      id: selectedAppointment.id,
+      status: newAppointmentStatus as any,
     });
   };
 
@@ -301,6 +354,13 @@ export default function AdminDashboard() {
                 {accessRequests.length}
               </Badge>
             )}
+          </Button>
+          <Button
+            variant={activeTab === "appointments" ? "default" : "outline"}
+            onClick={() => setActiveTab("appointments")}
+          >
+            <Calendar className="w-4 h-4 ml-2" />
+            مواعيد الأطباء
           </Button>
         </div>
 
@@ -502,6 +562,197 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
         )}
+
+        {/* Appointments Table */}
+        {activeTab === "appointments" && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>مواعيد الأطباء</CardTitle>
+                <CardDescription>إدارة ومتابعة جميع مواعيد حجز الأطباء</CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="بحث بالاسم، الهاتف، أو البريد..."
+                    value={appointmentSearchTerm}
+                    onChange={(e) => setAppointmentSearchTerm(e.target.value)}
+                    className="pr-10 w-80"
+                  />
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">إجمالي المواعيد</p>
+                      <p className="text-3xl font-bold text-primary">{appointmentStats.total}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                      <Calendar className="w-6 h-6 text-primary" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">قيد الانتظار</p>
+                      <p className="text-3xl font-bold text-yellow-600">{appointmentStats.pending}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <Calendar className="w-6 h-6 text-yellow-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">مؤكد</p>
+                      <p className="text-3xl font-bold text-green-600">{appointmentStats.confirmed}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                      <Calendar className="w-6 h-6 text-green-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">ملغي</p>
+                      <p className="text-3xl font-bold text-red-600">{appointmentStats.cancelled}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                      <Calendar className="w-6 h-6 text-red-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {appointmentsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : filteredAppointments.length === 0 ? (
+              <div className="text-center py-12">
+                <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <p className="text-lg font-semibold text-muted-foreground">
+                  {appointmentSearchTerm ? "لا توجد نتائج للبحث" : "لا توجد مواعيد بعد"}
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-right">اسم المريض</TableHead>
+                      <TableHead className="text-right">الهاتف</TableHead>
+                      <TableHead className="text-right">البريد الإلكتروني</TableHead>
+                      <TableHead className="text-right">الطبيب</TableHead>
+                      <TableHead className="text-right">التاريخ المفضل</TableHead>
+                      <TableHead className="text-right">الوقت المفضل</TableHead>
+                      <TableHead className="text-right">الحالة</TableHead>
+                      <TableHead className="text-right">تاريخ التسجيل</TableHead>
+                      <TableHead className="text-right">الإجراءات</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAppointments.map((appointment) => (
+                      <TableRow key={appointment.id}>
+                        <TableCell className="font-medium">{appointment.fullName}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-4 h-4 text-muted-foreground" />
+                            <span dir="ltr">{appointment.phone}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {appointment.email ? (
+                            <div className="flex items-center gap-2">
+                              <Mail className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm" dir="ltr">{appointment.email}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">غير متوفر</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{appointment.doctorName || `طبيب #${appointment.doctorId}`}</p>
+                            {appointment.doctorSpecialty && (
+                              <p className="text-xs text-muted-foreground">{appointment.doctorSpecialty}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {appointment.preferredDate || <span className="text-muted-foreground text-sm">غير محدد</span>}
+                        </TableCell>
+                        <TableCell>
+                          {appointment.preferredTime || <span className="text-muted-foreground text-sm">غير محدد</span>}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={
+                              appointment.status === "pending"
+                                ? "bg-yellow-500"
+                                : appointment.status === "confirmed"
+                                ? "bg-green-500"
+                                : appointment.status === "cancelled"
+                                ? "bg-red-500"
+                                : "bg-gray-500"
+                            }
+                          >
+                            {appointment.status === "pending" && "قيد الانتظار"}
+                            {appointment.status === "confirmed" && "مؤكد"}
+                            {appointment.status === "cancelled" && "ملغي"}
+                            {appointment.status === "completed" && "مكتمل"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(appointment.createdAt).toLocaleDateString('ar-YE')}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedAppointment(appointment);
+                                setNewAppointmentStatus(appointment.status);
+                                setAppointmentStatusDialogOpen(true);
+                              }}
+                            >
+                              <Eye className="w-4 h-4 ml-1" />
+                              تحديث الحالة
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        )}
       </main>
 
       {/* Status Update Dialog */}
@@ -570,6 +821,86 @@ export default function AdminDashboard() {
                   disabled={!newStatus || updateStatusMutation.isPending}
                 >
                   {updateStatusMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                      جاري الحفظ...
+                    </>
+                  ) : (
+                    "حفظ التغييرات"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Appointment Status Update Dialog */}
+      <Dialog open={appointmentStatusDialogOpen} onOpenChange={setAppointmentStatusDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تحديث حالة الموعد</DialogTitle>
+            <DialogDescription>
+              قم بتحديث حالة الموعد
+            </DialogDescription>
+          </DialogHeader>
+          {selectedAppointment && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <h4 className="font-semibold">معلومات الموعد:</h4>
+                <div className="bg-muted rounded-lg p-3 space-y-1">
+                  <p className="text-sm"><span className="font-semibold">المريض:</span> {selectedAppointment.fullName}</p>
+                  <p className="text-sm"><span className="font-semibold">الهاتف:</span> {selectedAppointment.phone}</p>
+                  {selectedAppointment.email && (
+                    <p className="text-sm"><span className="font-semibold">البريد:</span> {selectedAppointment.email}</p>
+                  )}
+                  <p className="text-sm"><span className="font-semibold">الطبيب:</span> {selectedAppointment.doctorName || `طبيب #${selectedAppointment.doctorId}`}</p>
+                  {selectedAppointment.doctorSpecialty && (
+                    <p className="text-sm"><span className="font-semibold">التخصص:</span> {selectedAppointment.doctorSpecialty}</p>
+                  )}
+                  {selectedAppointment.preferredDate && (
+                    <p className="text-sm"><span className="font-semibold">التاريخ المفضل:</span> {selectedAppointment.preferredDate}</p>
+                  )}
+                  {selectedAppointment.preferredTime && (
+                    <p className="text-sm"><span className="font-semibold">الوقت المفضل:</span> {selectedAppointment.preferredTime}</p>
+                  )}
+                  {selectedAppointment.notes && (
+                    <p className="text-sm"><span className="font-semibold">ملاحظات:</span> {selectedAppointment.notes}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="appointment-status">الحالة الجديدة</Label>
+                <Select value={newAppointmentStatus} onValueChange={setNewAppointmentStatus}>
+                  <SelectTrigger id="appointment-status">
+                    <SelectValue placeholder="اختر الحالة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">قيد الانتظار</SelectItem>
+                    <SelectItem value="confirmed">مؤكد</SelectItem>
+                    <SelectItem value="cancelled">ملغي</SelectItem>
+                    <SelectItem value="completed">مكتمل</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-2 justify-end pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setAppointmentStatusDialogOpen(false);
+                    setSelectedAppointment(null);
+                    setNewAppointmentStatus("");
+                  }}
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  onClick={handleAppointmentStatusUpdate}
+                  disabled={!newAppointmentStatus || updateAppointmentStatusMutation.isPending}
+                >
+                  {updateAppointmentStatusMutation.isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 ml-2 animate-spin" />
                       جاري الحفظ...

@@ -369,7 +369,30 @@ export async function getAllAppointments() {
   const db = await getDb();
   if (!db) return [];
   
-  const result = await db.select().from(appointments);
+  const result = await db
+    .select({
+      id: appointments.id,
+      campaignId: appointments.campaignId,
+      doctorId: appointments.doctorId,
+      fullName: appointments.fullName,
+      phone: appointments.phone,
+      email: appointments.email,
+      preferredDate: appointments.preferredDate,
+      preferredTime: appointments.preferredTime,
+      notes: appointments.notes,
+      status: appointments.status,
+      utmSource: appointments.utmSource,
+      utmMedium: appointments.utmMedium,
+      utmCampaign: appointments.utmCampaign,
+      utmContent: appointments.utmContent,
+      createdAt: appointments.createdAt,
+      updatedAt: appointments.updatedAt,
+      doctorName: doctors.name,
+      doctorSpecialty: doctors.specialty,
+    })
+    .from(appointments)
+    .leftJoin(doctors, eq(appointments.doctorId, doctors.id));
+  
   return result;
 }
 
