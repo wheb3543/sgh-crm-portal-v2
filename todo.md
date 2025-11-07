@@ -117,9 +117,13 @@
 - [ ] إضافة أيقونات البيانات المرتبطة بجانب كل حملة
 
 ## إعداد مستودع GitHub
-- [ ] إنشاء مستودع GitHub جديد
-- [ ] إضافة README.md شامل بالعربية والإنجليزية
-- [ ] إضافة CONTRIBUTING.md لتسهيل المساهمة
-- [ ] إضافة LICENSE للمشروع
-- [ ] إضافة .gitignore محدث
-- [ ] دفع المشروع إلى GitHub
+- [x] إنشاء مستودع GitHub جديد
+- [x] إضافة README.md شامل بالعربية والإنجليزية
+- [x] إضافة CONTRIBUTING.md لتسهيل المساهمة
+- [x] إضافة LICENSE للمشروع
+- [x] إضافة CHANGELOG.md
+- [x] إضافة SECURITY.md
+- [x] إضافة CODE_OF_CONDUCT.md
+- [x] إضافة قوالب GitHub Issues
+- [x] إضافة Topics للمستودع
+- [x] دفع المشروع إلى GitHub
