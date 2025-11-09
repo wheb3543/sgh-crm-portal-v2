@@ -34,10 +34,12 @@ import { sendNewLeadNotification, sendNewAppointmentEmail } from "./email";
 import { trackLead, trackCompleteRegistration } from "./facebookConversion";
 import { sendWelcomeMessage, sendBookingConfirmation, sendCustomMessage } from "./whatsapp";
 import { offersRouter } from "./routers/offers";
+import { campsRouter } from "./routers/camps";
 
 export const appRouter = router({
   system: systemRouter,
   offers: offersRouter,
+  camps: campsRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

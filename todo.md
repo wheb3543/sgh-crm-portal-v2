@@ -127,3 +127,14 @@
 - [x] إضافة قوالب GitHub Issues
 - [x] إضافة Topics للمستودع
 - [x] دفع المشروع إلى GitHub
+
+
+## نقل المشروع إلى Manus Web Development
+- [ ] نسخ drizzle/schema.ts
+- [ ] نسخ server routers (offers, camps)
+- [ ] نسخ server/db.ts functions
+- [ ] نسخ صفحات الواجهة الأمامية
+- [ ] نسخ لوحة التحكم الإدارية
+- [ ] نسخ المكونات والأصول
+- [ ] تكوين قاعدة البيانات
+- [ ] اختبار وحفظ checkpoint

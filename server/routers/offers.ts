@@ -8,7 +8,7 @@
 
 import { z } from 'zod';
 import { publicProcedure, protectedProcedure, router } from '../_core/trpc';
-import { db } from '../_core/db';
+import { getDb } from '../db';
 import { offers } from '../../drizzle/schema';
 import { eq, and, isNotNull } from 'drizzle-orm';
 import { generateSlug, isValidSlug } from '../../shared/_core/utils/slug';
@@ -32,6 +32,8 @@ export const offersRouter = router({
    */
   getAll: publicProcedure.query(async () => {
     try {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
       const allOffers = await db
         .select()
         .from(offers)
@@ -53,6 +55,8 @@ export const offersRouter = router({
     .input(z.object({ slug: z.string() }))
     .query(async ({ input }) => {
       try {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
         const offer = await db
           .select()
           .from(offers)
@@ -92,6 +96,8 @@ export const offersRouter = router({
         }
 
         // Check if slug already exists
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
         const existingOffer = await db
           .select()
           .from(offers)
@@ -147,6 +153,8 @@ export const offersRouter = router({
         }
 
         // Update the offer
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
         await db
           .update(offers)
           .set({
@@ -179,6 +187,8 @@ export const offersRouter = router({
       }
 
       try {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
         await db
           .update(offers)
           .set({ isActive: false })
@@ -204,6 +214,8 @@ export const offersRouter = router({
       }
 
       try {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
         await db.delete(offers).where(eq(offers.id, input.id));
 
         return { success: true };
